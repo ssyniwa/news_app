@@ -1,6 +1,16 @@
 import streamlit as st
 from google import genai
 import trafilatura
+from tenacity import retry, stop_after_attempt, wait_exponential
+
+# 429エラーが出た時に、間隔をあけて最大3回まで再試行する設定
+@retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10))
+def generate_summary_with_retry(prompt):
+    response = client.models.generate_content(
+        model="gemini-2.0-flash",
+        contents=prompt
+    )
+    return response
 
 # アプリのレイアウト設定
 st.set_page_config(page_title="News Summarizer", page_icon="📰")
@@ -39,10 +49,7 @@ if url:
             """
             
             try:
-                response = client.models.generate_content(
-                    model="gemini-2.0-flash", # または最新のモデル
-                    contents=prompt
-                )
+                response = generate_summary_with_retry(prompt)
                 
                 # 3. 結果の表示
                 st.subheader("✅ 3行要約")
